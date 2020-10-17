@@ -11,6 +11,7 @@ font = pg.font.Font(None, 100)
 
 RES = WIDTH, HEIGHT = 800, 800
 FPS = 60
+_FPS = 1 / FPS
 
 pg.init()
 surface = pg.display.set_mode(RES)
@@ -31,6 +32,16 @@ drower.collision_types = collision_types
 drower.space = space
 drower.draw_heart()
 blood_v = 0
+
+
+def get_bit_rate(t):
+    return 1 / (sum(t) / len(t))
+
+
+def generate_input():
+    r = random.randint(55, 95)
+    return [1 / r for i in range(1, r + 1)]
+
 
 class Kostyl():
     def __init__(self):
@@ -129,15 +140,20 @@ class Border():
 
 
 class Heart():
-    def __init__(self, borders, muscles, kostyls, start_bit_rate):
+    def __init__(self, borders, muscles, kostyls):
         self.kostyls = kostyls
         self.borders = borders
         self.muscles = muscles
         self.t = 0
-        self.bit_rate = start_bit_rate
         self.is_use = False
+
+        self.timing = generate_input()
+        self.timer = 0
     
     def use(self):
+        self.timing.append(self.timer)
+        self.timing = self.timing[1:]
+        self.timer = 0
         self.is_use = True
         try:
             for border in self.borders:
@@ -151,7 +167,6 @@ class Heart():
                 for border in self.borders:
                     border.destroy()
                 self.t = 0
-                self.bit_rate += 1
                 self.is_use = False
                 self.kostyls.off()
             elif self.t <= 20 and self.is_use:
@@ -167,6 +182,8 @@ class Heart():
         else:
             for muscle in muscles:
                 muscle.not_active()
+
+        self.timer += _FPS
 
 
 h = space.add_collision_handler(
@@ -197,7 +214,7 @@ cleaner2 = drower.create_cleaner((514, 354), (421, 404))
 
 
 
-heart = Heart(borders, muscles, kostyl, random.randint(60, 90))
+heart = Heart(borders, muscles, kostyl)
 frames_timer = 0
 
 
@@ -208,41 +225,38 @@ def reset():
     drower.draw_heart()
     for m in muscles:
         m.draw()
-    heart = Heart(borders, muscles, kostyl, random.randint(60, 90))
+    heart = Heart(borders, muscles, kostyl)
     cleaner1 = drower.create_cleaner((303, 376), (413, 382))
     cleaner2 = drower.create_cleaner((514, 354), (421, 404))
-    
-    frames_timer = 0
+
     blood_v = 0
 
 
 def step(action):
-    global blood_v, frames_timer
+    global blood_v, bit_rate
     
     spawn_blood_cell((215, 271), (0, 0), "blue")
     spawn_blood_cell((582, 187), (0, 0), "red")
     if action == 1 and not heart.is_use:
         heart.use()
     heart.update()
-            
-    if frames_timer % FPS == 0:
-        heart.bit_rate -= 1
-        frames_timer = 0
-    frames_timer += 1
-    
-    if (blood_v < 950) and (55 < heart.bit_rate < 110):
+
+    bit_rate = get_bit_rate(heart.timing)
+    print(heart.timing)
+    print(bit_rate)
+    if (blood_v < 950) and (55 < bit_rate < 140):
         done = False
     else:
         done = True
-    space.step(1 / (FPS))
+    space.step(_FPS)
     clock.tick(FPS)
     
-    return [heart.bit_rate, blood_v], done, heart.is_use
+    return [bit_rate, blood_v], done, heart.is_use
 
 
 def render():
     surface.fill(pg.Color("black"))
-    text = font.render(str(heart.bit_rate), 5, (255, 180, 180))
+    text = font.render(str(int(bit_rate)), 5, (255, 180, 180))
     surface.blit(text, (650, 710))
     space.debug_draw(draw_options)
     pg.display.flip()
