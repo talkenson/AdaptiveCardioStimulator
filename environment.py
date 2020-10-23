@@ -19,9 +19,8 @@ clock = pg.time.Clock()
 draw_options = pymunk.pygame_util.DrawOptions(surface)
 
 space = pymunk.Space()
-space.gravity = 0, 1500
+space.gravity = 0, 2500
 blood_v = 0
-bit_rate = 60
 
 collision_types = {
     "blood_cells": 1,
@@ -40,7 +39,7 @@ def get_bit_rate(t):
 
 def generate_input():
     r = random.randint(55, 95)
-    return [1 / r for i in range(1, r + 1)]
+    return [1 / r for _ in range(1, r + 1)]
 
 
 class Kostyl():
@@ -86,7 +85,7 @@ class Blood_cell():
 
 def spawn_blood_cell(pos, impulse, color):
     global blood_v
-    for _ in range(2):
+    for _ in range(3):
         new_cell = Blood_cell(pos, impulse, color)
         new_cell.spawn()
         blood_v += 1
@@ -155,6 +154,7 @@ class Heart():
         self.timing = self.timing[1:]
         self.timer = 0
         self.is_use = True
+        
         try:
             for border in self.borders:
                 border.spawn()
@@ -182,9 +182,8 @@ class Heart():
         else:
             for muscle in muscles:
                 muscle.not_active()
-
+                
         self.timer += _FPS
-
 
 h = space.add_collision_handler(
     collision_types["blood_cells"], 
@@ -219,7 +218,7 @@ frames_timer = 0
 
 
 def reset():
-    global blood_v, frames_timer, heart
+    global blood_v, frames_timer, heart, bit_rate
     
     space.remove(space.shapes)
     drower.draw_heart()
@@ -228,6 +227,7 @@ def reset():
     heart = Heart(borders, muscles, kostyl)
     cleaner1 = drower.create_cleaner((303, 376), (413, 382))
     cleaner2 = drower.create_cleaner((514, 354), (421, 404))
+    bit_rate = get_bit_rate(heart.timing)
 
     blood_v = 0
 
@@ -242,8 +242,6 @@ def step(action):
     heart.update()
 
     bit_rate = get_bit_rate(heart.timing)
-    print(heart.timing)
-    print(bit_rate)
     if (blood_v < 950) and (55 < bit_rate < 140):
         done = False
     else:
@@ -255,6 +253,7 @@ def step(action):
 
 
 def render():
+    global bit_rate
     surface.fill(pg.Color("black"))
     text = font.render(str(int(bit_rate)), 5, (255, 180, 180))
     surface.blit(text, (650, 710))
