@@ -33,13 +33,9 @@ drower.draw_heart()
 blood_v = 0
 
 
-def get_bit_rate(t):
-    return 1 / (sum(t) / len(t))
-
-
 def generate_input():
     r = random.randint(55, 95)
-    return [1 / r for _ in range(1, r + 1)]
+    return [r / 60 for i in range(1, r + 1)]
 
 
 class Kostyl():
@@ -145,14 +141,12 @@ class Heart():
         self.muscles = muscles
         self.t = 0
         self.is_use = False
-
-        self.timing = generate_input()
+        
         self.timer = 0
+        self.timing = generate_input()
     
     def use(self):
-        self.timing.append(self.timer)
-        self.timing = self.timing[1:]
-        self.timer = 0
+        self.timer += 1
         self.is_use = True
         
         try:
@@ -183,7 +177,6 @@ class Heart():
             for muscle in muscles:
                 muscle.not_active()
                 
-        self.timer += _FPS
 
 h = space.add_collision_handler(
     collision_types["blood_cells"], 
@@ -216,9 +209,8 @@ cleaner2 = drower.create_cleaner((514, 354), (421, 404))
 heart = Heart(borders, muscles, kostyl)
 frames_timer = 0
 
-
 def reset():
-    global blood_v, frames_timer, heart, bit_rate
+    global blood_v, heart, bit_rate, frames_timer
     
     space.remove(space.shapes)
     drower.draw_heart()
@@ -227,21 +219,30 @@ def reset():
     heart = Heart(borders, muscles, kostyl)
     cleaner1 = drower.create_cleaner((303, 376), (413, 382))
     cleaner2 = drower.create_cleaner((514, 354), (421, 404))
-    bit_rate = get_bit_rate(heart.timing)
 
     blood_v = 0
-
+    frames_timer = 0
+    bit_rate = sum(heart.timing)
+    
 
 def step(action):
-    global blood_v, bit_rate
+    global blood_v, bit_rate, frames_timer
     
     spawn_blood_cell((215, 271), (0, 0), "blue")
     spawn_blood_cell((582, 187), (0, 0), "red")
     if action == 1 and not heart.is_use:
         heart.use()
+        
     heart.update()
-
-    bit_rate = get_bit_rate(heart.timing)
+    
+    frames_timer += 1
+    if frames_timer == 60:
+        frames_timer = 0
+        heart.timing.append(heart.timer)
+        heart.timing = heart.timing[1:]
+        heart.timer = 0
+    
+    bit_rate = sum(heart.timing)
     if (blood_v < 950) and (55 < bit_rate < 140):
         done = False
     else:

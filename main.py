@@ -17,7 +17,7 @@ env.step принимает action: 1 - биться сердцу, 0 - не би
 
 while True:
     if not heart_is_use:
-        action = 1 if random.randint(0, 400) > 395 else 0 # action должен генерироваться нейросетью
+        action = 1 if random.randint(0, 400) > 400 else 0 # action должен генерироваться нейросетью
         observation, done, heart_is_use = env.step(action)
     else:
         _, _, heart_is_use = env.step(0)
