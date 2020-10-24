@@ -1,8 +1,9 @@
 import environment as env
 import random
 
+
 env.reset()
-observation, done, heart_is_use = env.step(0)
+observation, loss, done, heart_is_use = env.step(0)
 
 """
 env.step принимает action: 1 - биться сердцу, 0 - не биться сердцу.
@@ -17,12 +18,13 @@ env.step принимает action: 1 - биться сердцу, 0 - не би
 
 while True:
     if not heart_is_use:
-        action = 1 if random.randint(0, 400) > 400 else 0 # action должен генерироваться нейросетью
-        observation, done, heart_is_use = env.step(action)
+        action = 1 if random.randint(0, 400) > 390 else 0 # action должен генерироваться нейросетью
+        observation, loss, done, heart_is_use = env.step(action)
     else:
-        _, _, heart_is_use = env.step(0)
+        _, _, _, heart_is_use = env.step(0)
         
     env.render()
+    print(loss)
     
     if done:
         env.reset()

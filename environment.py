@@ -19,7 +19,7 @@ clock = pg.time.Clock()
 draw_options = pymunk.pygame_util.DrawOptions(surface)
 
 space = pymunk.Space()
-space.gravity = 0, 2500
+space.gravity = 0, 2000
 blood_v = 0
 
 collision_types = {
@@ -31,6 +31,20 @@ drower.collision_types = collision_types
 drower.space = space
 drower.draw_heart()
 blood_v = 0
+
+
+def get_loss(t):
+    for i in range(len(t)):
+        if i == 0:
+            k = 0.2
+        elif i == 15:
+            k = 0.45
+        elif i == 30:
+            k = 1.2
+        elif i == 45:
+            k = 1.8
+        t[i] *= k
+    return abs((sum(t) / 48) * 60 - 68) / 3
 
 
 def generate_input():
@@ -81,7 +95,7 @@ class Blood_cell():
 
 def spawn_blood_cell(pos, impulse, color):
     global blood_v
-    for _ in range(3):
+    for _ in range(2):
         new_cell = Blood_cell(pos, impulse, color)
         new_cell.spawn()
         blood_v += 1
@@ -243,14 +257,14 @@ def step(action):
         heart.timer = 0
     
     bit_rate = sum(heart.timing)
-    if (blood_v < 950) and (55 < bit_rate < 140):
+    loss = get_loss(heart.timing.copy())
+    if (blood_v < 1200) and (55 < bit_rate < 140):
         done = False
     else:
         done = True
     space.step(_FPS)
     clock.tick(FPS)
-    
-    return [bit_rate, blood_v], done, heart.is_use
+    return [bit_rate, blood_v], loss, done, heart.is_use
 
 
 def render():
