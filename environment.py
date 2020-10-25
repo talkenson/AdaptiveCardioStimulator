@@ -14,6 +14,9 @@ RES = WIDTH, HEIGHT = 800, 800
 FPS = 60
 _FPS = 1 / FPS
 
+LOW_SHELF = 55
+HIGH_SHELF = 140
+
 pg.init()
 surface = pg.display.set_mode(RES)
 clock = pg.time.Clock()
@@ -33,13 +36,24 @@ drower.space = space
 drower.draw_heart()
 blood_v = 0
 
+target_bpm = 0
 
-def analyze_br(x):
+
+def analyze_br_func(x):
     return round(min((1 / (1 + math.exp(-(x/6 - 4.4)))) * 0.0403 * x + 0.1, 2.2), 4)
 
-def generate_input():
-    r = random.randint(65, 95)
+analyze_br = [analyze_br_func(i) for i in range(1, 61)]
+
+def generate_bpm_history():
+    r = random.randint(LOW_SHELF + 6, HIGH_SHELF - 10)
+    print(f'Current BPM: %dbpm' % r)
     return [r / 60 for i in range(60)]
+
+def generate_target_bpm():
+    global target_bpm
+    r = random.randint(LOW_SHELF + 5, HIGH_SHELF - 25)
+    print(f'Next objective: %dbpm' % r)
+    target_bpm = r
 
 
 class Kostyl():
@@ -133,8 +147,7 @@ class Border():
         space.add(self.segment_shape)
         
     def destroy(self):
-        space.remove(self.segment_shape)
-            
+        space.remove(self.segment_shape)  
 
 class Heart():
     def __init__(self, borders, muscles, kostyls):
@@ -144,7 +157,7 @@ class Heart():
         self.t = 0
         self.is_use = False
         self.counter = 0
-        self.timing = generate_input()
+        self.timing = generate_bpm_history()
     
     def use(self):
         self.counter += 1
@@ -205,7 +218,6 @@ muscles = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12]
 cleaner1 = drower.create_cleaner((303, 376), (413, 382))
 cleaner2 = drower.create_cleaner((514, 354), (421, 404))
 
-
 heart = None
 frames_timer = 0
 
@@ -222,7 +234,7 @@ def reset():
 
     blood_v = 0
     frames_timer = 0
-    bit_rate = sum([analyze_br(i) * heart.timing[i] for i in range(0, 60)])
+    bit_rate = sum([analyze_br[i] * heart.timing[i] for i in range(60)])
 
 
 def step(action):
@@ -247,19 +259,17 @@ def step(action):
         heart.timing = heart.timing[1:]
         heart.counter = 0
 
-    bit_rate = sum([analyze_br(i) * heart.timing[i] for i in range(60)])
-    
+    bit_rate = sum([analyze_br[i] * heart.timing[i] for i in range(0, 60)])
+
     loss = 1
     if (blood_v < 1100) and (55 < bit_rate < 140):
         done = False
     else:
         done = True
-    space.step(_FPS)
-    #clock.tick(FPS)
-    
-    print(blood_v, bit_rate)
-    return [bit_rate, blood_v], loss, done, heart.is_use
 
+    space.step(_FPS)    
+
+    return [bit_rate, blood_v], loss, done, heart.is_use
 
 def render():
     global bit_rate
@@ -269,4 +279,3 @@ def render():
     surface.blit(text, (650, 710))
     space.debug_draw(draw_options)
     pg.display.update()
-    #pg.display.flip()
