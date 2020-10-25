@@ -3,11 +3,11 @@ import pymunk.pygame_util
 import random
 import drower
 from pymunk import Vec2d
+import math
 
 pymunk.pygame_util.positive_y_is_up = False
 pg.font.init()
 font = pg.font.Font(None, 100)
-
 
 RES = WIDTH, HEIGHT = 800, 800
 FPS = 60
@@ -33,22 +33,12 @@ drower.draw_heart()
 blood_v = 0
 
 
-def get_loss(t):
-    for i in range(len(t)):
-        if i == 0:
-            k = 0.2
-        elif i == 15:
-            k = 0.45
-        elif i == 30:
-            k = 1.2
-        elif i == 45:
-            k = 1.8
-        t[i] *= k
-    return abs((sum(t) / 48) * 60 - 68) / 3
-
+def analyze_br(x):
+    return round(min((1 / (1 + math.exp(-(x/6 - 4.4)))) * 0.0403 * x + 0.1, 2.2), 4)
 
 def generate_input():
-    r = random.randint(55, 95)
+    r = random.randint(65, 95)
+    print(f'Next objective: %dbpm' % r)
     return [r / 60 for i in range(1, r + 1)]
 
 
@@ -72,12 +62,11 @@ class Kostyl():
     
     def off(self):
         space.remove(*self.all_shapes)
+
 kostyl = Kostyl()
 
-
 class Blood_cell():
-    
-    def __init__(self, pos, impulse, color, moment=6.2, mass=0.5, radius=8):
+    def __init__(self, pos, impulse, color, moment=6.2, mass=0.5, radius=6):
         self.body = pymunk.Body(mass, moment)
         self.body.position = pos
         self.body.apply_impulse_at_local_point(Vec2d(impulse))
@@ -147,7 +136,6 @@ class Border():
         space.remove(self.segment_shape)
             
 
-
 class Heart():
     def __init__(self, borders, muscles, kostyls):
         self.kostyls = kostyls
@@ -155,12 +143,11 @@ class Heart():
         self.muscles = muscles
         self.t = 0
         self.is_use = False
-        
-        self.timer = 0
+        self.counter = 0
         self.timing = generate_input()
     
     def use(self):
-        self.timer += 1
+        self.counter += 1
         self.is_use = True
         
         try:
@@ -219,8 +206,7 @@ cleaner1 = drower.create_cleaner((303, 376), (413, 382))
 cleaner2 = drower.create_cleaner((514, 354), (421, 404))
 
 
-
-heart = Heart(borders, muscles, kostyl)
+heart = None
 frames_timer = 0
 
 def reset():
@@ -236,14 +222,18 @@ def reset():
 
     blood_v = 0
     frames_timer = 0
-    bit_rate = sum(heart.timing)
-    
+    bit_rate = sum([analyze_br(i) * heart.timing[i] for i in range(0, 60)])
+
 
 def step(action):
     global blood_v, bit_rate, frames_timer
-    
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            raise SystemExit
+
     spawn_blood_cell((215, 271), (0, 0), "blue")
     spawn_blood_cell((582, 187), (0, 0), "red")
+
     if action == 1 and not heart.is_use:
         heart.use()
         
@@ -252,25 +242,30 @@ def step(action):
     frames_timer += 1
     if frames_timer == 60:
         frames_timer = 0
-        heart.timing.append(heart.timer)
+        heart.timing.append(heart.counter)
         heart.timing = heart.timing[1:]
-        heart.timer = 0
-    
-    bit_rate = sum(heart.timing)
-    loss = get_loss(heart.timing.copy())
+        heart.counter = 0
+
+    bit_rate = sum([analyze_br(i) * heart.timing[i] for i in range(0, 60)])
+    #print(str(heart.timing) + ' <- array, sum -> ' + str(sum(heart.timing)))
+
+    loss = 1
     if (blood_v < 1200) and (55 < bit_rate < 140):
         done = False
     else:
         done = True
     space.step(_FPS)
-    clock.tick(FPS)
+    #clock.tick(FPS)
+    
     return [bit_rate, blood_v], loss, done, heart.is_use
 
 
 def render():
     global bit_rate
+    pg.event.get()
     surface.fill(pg.Color("black"))
-    text = font.render(str(int(bit_rate)), 5, (255, 180, 180))
+    text = font.render(str(bit_rate), 5, (255, 180, 180))
     surface.blit(text, (650, 710))
     space.debug_draw(draw_options)
-    pg.display.flip()
+    pg.display.update()
+    #pg.display.flip()
