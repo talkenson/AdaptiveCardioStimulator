@@ -1,3 +1,4 @@
+#
 import pygame as pg
 import pymunk.pygame_util
 import random
@@ -53,7 +54,6 @@ def generate_target_bpm():
     r = random.randint(LOW_SHELF + 5, HIGH_SHELF - 25)
     print(f'Next objective: %dbpm' % r)
     target_bpm = r
-
 
 
 class Kostyl():
@@ -147,8 +147,7 @@ class Border():
         space.add(self.segment_shape)
         
     def destroy(self):
-        space.remove(self.segment_shape)
-            
+        space.remove(self.segment_shape)  
 
 class Heart():
     def __init__(self, borders, muscles, kostyls):
@@ -240,6 +239,7 @@ def reset():
 
 def step(action):
     global blood_v, bit_rate, frames_timer
+    
     for event in pg.event.get():
         if event.type == pg.QUIT:
             raise SystemExit
@@ -266,9 +266,10 @@ def step(action):
         done = False
     else:
         done = True
-    space.step(_FPS)    
-    return [bit_rate, blood_v], loss, done, heart.is_use
 
+    space.step(_FPS)    
+
+    return [bit_rate, blood_v], loss, done, heart.is_use
 
 def render():
     global bit_rate
