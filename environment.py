@@ -13,13 +13,16 @@ RES = WIDTH, HEIGHT = 800, 800
 FPS = 60
 _FPS = 1 / FPS
 
+LOW_SHELF = 55
+HIGH_SHELF = 140
+
 pg.init()
 surface = pg.display.set_mode(RES)
 clock = pg.time.Clock()
 draw_options = pymunk.pygame_util.DrawOptions(surface)
 
 space = pymunk.Space()
-space.gravity = 0, 2000
+space.gravity = 0, 2500
 blood_v = 0
 
 collision_types = {
@@ -32,14 +35,25 @@ drower.space = space
 drower.draw_heart()
 blood_v = 0
 
+target_bpm = 0
 
-def analyze_br(x):
+
+def analyze_br_func(x):
     return round(min((1 / (1 + math.exp(-(x/6 - 4.4)))) * 0.0403 * x + 0.1, 2.2), 4)
 
-def generate_input():
-    r = random.randint(65, 95)
+analyze_br = [analyze_br_func(i) for i in range(1, 61)]
+
+def generate_bpm_history():
+    r = random.randint(LOW_SHELF + 6, HIGH_SHELF - 10)
+    print(f'Current BPM: %dbpm' % r)
+    return [r / 60 for i in range(60)]
+
+def generate_target_bpm():
+    global target_bpm
+    r = random.randint(LOW_SHELF + 5, HIGH_SHELF - 25)
     print(f'Next objective: %dbpm' % r)
-    return [r / 60 for i in range(1, r + 1)]
+    target_bpm = r
+
 
 
 class Kostyl():
@@ -66,7 +80,7 @@ class Kostyl():
 kostyl = Kostyl()
 
 class Blood_cell():
-    def __init__(self, pos, impulse, color, moment=6.2, mass=0.5, radius=6):
+    def __init__(self, pos, impulse, color, moment=6.2, mass=0.5, radius=8):
         self.body = pymunk.Body(mass, moment)
         self.body.position = pos
         self.body.apply_impulse_at_local_point(Vec2d(impulse))
@@ -144,7 +158,7 @@ class Heart():
         self.t = 0
         self.is_use = False
         self.counter = 0
-        self.timing = generate_input()
+        self.timing = generate_bpm_history()
     
     def use(self):
         self.counter += 1
@@ -205,7 +219,6 @@ muscles = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12]
 cleaner1 = drower.create_cleaner((303, 376), (413, 382))
 cleaner2 = drower.create_cleaner((514, 354), (421, 404))
 
-
 heart = None
 frames_timer = 0
 
@@ -222,7 +235,7 @@ def reset():
 
     blood_v = 0
     frames_timer = 0
-    bit_rate = sum([analyze_br(i) * heart.timing[i] for i in range(0, 60)])
+    bit_rate = sum([analyze_br[i] * heart.timing[i] for i in range(60)])
 
 
 def step(action):
@@ -246,17 +259,14 @@ def step(action):
         heart.timing = heart.timing[1:]
         heart.counter = 0
 
-    bit_rate = sum([analyze_br(i) * heart.timing[i] for i in range(0, 60)])
-    #print(str(heart.timing) + ' <- array, sum -> ' + str(sum(heart.timing)))
+    bit_rate = sum([analyze_br[i] * heart.timing[i] for i in range(0, 60)])
 
     loss = 1
-    if (blood_v < 1200) and (55 < bit_rate < 140):
+    if (blood_v < 1100) and (55 < bit_rate < 140):
         done = False
     else:
         done = True
-    space.step(_FPS)
-    #clock.tick(FPS)
-    
+    space.step(_FPS)    
     return [bit_rate, blood_v], loss, done, heart.is_use
 
 
@@ -264,8 +274,7 @@ def render():
     global bit_rate
     pg.event.get()
     surface.fill(pg.Color("black"))
-    text = font.render(str(bit_rate), 5, (255, 180, 180))
+    text = font.render(str(int(bit_rate)), 5, (255, 180, 180))
     surface.blit(text, (650, 710))
     space.debug_draw(draw_options)
     pg.display.update()
-    #pg.display.flip()
