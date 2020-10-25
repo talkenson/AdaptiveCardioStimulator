@@ -235,6 +235,7 @@ def reset():
     blood_v = 0
     frames_timer = 0
     bit_rate = sum([analyze_br[i] * heart.timing[i] for i in range(60)])
+    target_bpm = generate_target_bpm()
 
 
 def step(action):
