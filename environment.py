@@ -1,4 +1,3 @@
-#
 import pygame as pg
 import pymunk.pygame_util
 import random
@@ -42,12 +41,34 @@ target_bpm = 0
 def analyze_br_func(x):
     return round(min((1 / (1 + math.exp(-(x/6 - 4.4)))) * 0.0403 * x + 0.1, 2.2), 4)
 
+
 analyze_br = [analyze_br_func(i) for i in range(1, 61)]
+
 
 def generate_bpm_history():
     r = random.randint(LOW_SHELF + 6, HIGH_SHELF - 10)
     print(f'Current BPM: %dbpm' % r)
     return [r / 60 for i in range(60)]
+
+
+def calc_reward_func(target_beat_rate):
+    x1, y1 = target_beat_rate - 10, 0
+    x2, y2 = target_beat_rate, 1
+    x3, y3 = target_beat_rate + 10, 0
+    
+    a = (y3 - ((x3 * (y2 - y1) + x2 * y1 - x1 * y2) / (x2 - x1))) / (x3 * (x3 - x1 - x2) + x1 * x2)
+    b = ((y2 - y1) / (x2 - x1)) - a * (x1 + x2)
+    c = (x2 * y1 - x1 * y2) / (x2 - x1) + a * x1 * x2
+    return a, b, c
+
+
+a, b, c = calc_reward_func(60)
+
+
+def get_reward(x):
+    global a, b, c
+    return round(a * x * x + b * x + c, 3)
+
 
 def generate_target_bpm():
     global target_bpm
@@ -77,7 +98,9 @@ class Kostyl():
     def off(self):
         space.remove(*self.all_shapes)
 
+
 kostyl = Kostyl()
+
 
 class Blood_cell():
     def __init__(self, pos, impulse, color, moment=6.2, mass=0.5, radius=8):
@@ -222,7 +245,7 @@ heart = None
 frames_timer = 0
 
 def reset():
-    global blood_v, heart, bit_rate, frames_timer
+    global blood_v, heart, beat_rate, frames_timer
     
     space.remove(space.shapes)
     drower.draw_heart()
@@ -234,12 +257,12 @@ def reset():
 
     blood_v = 0
     frames_timer = 0
-    bit_rate = sum([analyze_br[i] * heart.timing[i] for i in range(60)])
+    beat_rate = sum([analyze_br[i] * heart.timing[i] for i in range(60)])
     target_bpm = generate_target_bpm()
 
 
 def step(action):
-    global blood_v, bit_rate, frames_timer
+    global blood_v, beat_rate, frames_timer
     
     for event in pg.event.get():
         if event.type == pg.QUIT:
@@ -260,23 +283,23 @@ def step(action):
         heart.timing = heart.timing[1:]
         heart.counter = 0
 
-    bit_rate = sum([analyze_br[i] * heart.timing[i] for i in range(0, 60)])
+    beat_rate = sum([analyze_br[i] * heart.timing[i] for i in range(0, 60)])
 
-    loss = 1
-    if (blood_v < 1100) and (55 < bit_rate < 140):
+    reward = get_reward(beat_rate)
+    if (blood_v < 1100) and (55 < beat_rate < 140):
         done = False
     else:
         done = True
 
     space.step(_FPS)    
 
-    return [bit_rate, blood_v], loss, done, heart.is_use
+    return [beat_rate, blood_v], reward, done, heart.is_use
 
 def render():
-    global bit_rate
+    global beat_rate
     pg.event.get()
     surface.fill(pg.Color("black"))
-    text = font.render(str(int(bit_rate)), 5, (255, 180, 180))
+    text = font.render(str(int(beat_rate)), 5, (255, 180, 180))
     surface.blit(text, (650, 710))
     space.debug_draw(draw_options)
     pg.display.update()

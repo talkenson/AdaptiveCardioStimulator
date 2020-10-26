@@ -2,6 +2,12 @@ import environment as env
 import random
 import time
 
+def calc_loss(rewards):
+    loss = 0
+    for i in range(len(rewards)):
+        loss += abs(1 - rewards[i]) * i * 0.001
+    return loss
+
 
 env.reset()
 observation, loss, done, heart_is_use = env.step(0)
@@ -16,19 +22,19 @@ env.step принимает action: 1 - биться сердцу, 0 - не би
                 да и смысла в этом нет. Поэтому мы должны подавать информацию нейросети,
                 если heart_is_use имеет значение False.
 """
-
+rewards = []
 while True:
-    
     time.sleep(0.01)
     if not heart_is_use:
         action = 1 if random.randint(0, 400) > 390 else 0 # action должен генерироваться нейросетью
-        observation, loss, done, heart_is_use = env.step(action)
+        observation, reward, done, heart_is_use = env.step(action)
+        rewards.append(reward)
     else:
         _, _, _, heart_is_use = env.step(0)
     
     env.render()
-    #print(loss)
-    #print(observation)
     
     if done:
+        print(calc_loss(rewards))
+        rewards = []
         env.reset()
