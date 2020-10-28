@@ -52,9 +52,9 @@ def generate_bpm_history():
 
 
 def calc_reward_func(target_beat_rate):
-    x1, y1 = target_beat_rate - 10, 0
-    x2, y2 = target_beat_rate, 1
-    x3, y3 = target_beat_rate + 10, 0
+    x1, y1 = target_beat_rate - 10, -1
+    x2, y2 = target_beat_rate, 0
+    x3, y3 = target_beat_rate + 10, -1
     
     a = (y3 - ((x3 * (y2 - y1) + x2 * y1 - x1 * y2) / (x2 - x1))) / (x3 * (x3 - x1 - x2) + x1 * x2)
     b = ((y2 - y1) / (x2 - x1)) - a * (x1 + x2)
